@@ -1,274 +1,113 @@
-# 🌅 Realistic Nature Scene - Day/Night Cycle
+# 🌅 Realistic Nature Scene
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Stars](https://img.shields.io/github/stars/Deextire/realistic-3d-scene?style=social)](https://github.com/Deextire/realistic-3d-scene)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)]()
+A mobile-friendly Three.js nature scene with optimized rendering, smooth camera controls, day/night lighting, aurora, and customizable graphics.
 
-An interactive 3D scene featuring realistic lighting, dynamic day/night cycles, and comprehensive graphics customization. Built with **Three.js** for modern web browsers.
+## Features
 
-## ✨ Features
+- Smooth mouse wheel and touch zoom using damping and `zoomToCursor` when supported.
+- Stable pause/resume for the simulated 20-minute day cycle.
+- Real-time mode, GPS permission fallback, and manual coordinates.
+- Presets: **Minimum, Low, Medium, High, Ultra, Cinematic, Realistic**.
+- Quick lighting modes: **Day, Sunrise, Sunset, Night**.
+- Optional Aurora Borealis effect in the graphics panel.
+- Instanced grass and bounded animation work to reduce low-end frame spikes.
+- MIT licensed and editable.
 
-### 🌍 Day/Night Cycle Modes
-- **Simulated Mode:** Complete day cycle in 20 minutes with adjustable speed
-- **Real-Time Mode:** Accurate sun position based on actual location and time
-- **Smooth Transitions:** Sunrise → Noon → Sunset → Night → Sunrise
-- **Geolocation Support:** Auto-detect your location for accurate lighting
+## Quick start: desktop
 
-### 🎨 Graphics Customization
-- **5 Quality Presets:** Minimum, Low, Medium, High, Ultra
-- **Auto-Detection:** Automatically recommends settings for your device
-- **Individual Controls:**
-  - Shadow quality and resolution
-  - Bloom strength
-  - Vegetation density
-  - Custom color picker for sky, fog, sun
-- **Persistent Storage:** Settings saved to browser localStorage
-
-### 🎮 Interactive Controls
-- **Mouse:** Drag to rotate, scroll to zoom
-- **Touch:** Single finger rotate, two-finger pinch zoom
-- **Keyboard Shortcuts:** G for graphics, H for help, R for reset
-- **Mobile Optimized:** Responsive UI that adapts to screen size
-
-### 📊 Advanced Features
-- **Realistic Lighting:** ACES filmic tone mapping and PCF soft shadows
-- **Atmospheric Effects:** Volumetric sun rays, fog, and bloom
-- **Procedural Vegetation:** Grass and trees with LOD optimization
-- **Performance Monitoring:** FPS indicators and memory usage
-- **Open Source:** MIT licensed, community-friendly
-
-## 🚀 Quick Start
-
-### Installation
+No build tool is required. The project loads Three.js from jsDelivr.
 
 ```bash
-# Clone the repository
 git clone https://github.com/Deextire/realistic-3d-scene.git
 cd realistic-3d-scene
+python3 -m http.server 8000
+```
 
-# Start a local server
+Open `http://localhost:8000` in Chrome, Firefox, Edge, or Safari. Do not open `index.html` directly with `file://`; ES modules and geolocation are restricted there.
+
+### Desktop tools
+
+- Git, or the GitHub ZIP download.
+- A modern browser with WebGL2/WebGL support.
+- Python 3, Node.js `npx serve`, VS Code Live Server, or Docker for a local server.
+- Optional: browser DevTools for FPS and error inspection.
+
+## Quick start: Android / Termux
+
+1. Install **Termux from F-Droid or GitHub Releases**, not an outdated Play Store build.
+2. In Termux:
+
+```bash
+pkg update && pkg upgrade
+pkg install git python
+termux-setup-storage
+git clone https://github.com/Deextire/realistic-3d-scene.git
+cd realistic-3d-scene
 python -m http.server 8000
-# Or if using Python 2:
-python -m SimpleHTTPServer 8000
-
-# Open in browser
-# Visit: http://localhost:8000
 ```
 
-### Alternative Server Options
+3. Open `http://127.0.0.1:8000` in Chrome or Firefox on the same device.
+4. For GPS mode, grant browser location permission. If it is unavailable, enter latitude and longitude manually.
 
-**Node.js:**
-```bash
-npm install -g http-server
-http-server
-```
+Termux is only needed to serve the files locally; the scene itself runs in the browser. iOS users can use GitHub Codespaces, a static host, or any local HTTP server app because iOS does not provide a comparable general-purpose terminal workflow.
 
-**Live Server (VS Code):**
-- Install "Live Server" extension
-- Right-click `index.html` → "Open with Live Server"
+## Presets and performance
 
-**Docker:**
-```bash
-docker run -p 8000:80 -v $(pwd):/usr/share/nginx/html nginx
-```
+- **Minimum:** older phones and integrated graphics; no dynamic shadows.
+- **Low:** budget mobile devices.
+- **Medium:** default balance.
+- **High:** modern laptops and phones.
+- **Ultra:** powerful desktop GPUs.
+- **Cinematic:** stronger bloom and rays with moderate geometry.
+- **Realistic:** higher geometry, shadows, and atmospheric detail.
 
-## 📖 Documentation
+If the horizon stutters, switch to Low/Minimum, disable Aurora, reduce bloom, and close other tabs. The scene caps frame delta to prevent a large simulation jump after a background-tab pause.
 
-### Complete Tutorial
-For comprehensive guides on:
-- Basic controls and navigation
-- Graphics settings explanation
-- Location and time configuration
-- Troubleshooting and optimization
-
-See **[TUTORIAL.md](./TUTORIAL.md)** for full documentation.
-
-### Quick Controls
+## Controls
 
 | Action | Desktop | Mobile |
-|--------|---------|--------|
-| Rotate View | Drag Mouse | One Finger Drag |
-| Zoom | Scroll Wheel | Pinch |
-| Pause | Space or Button | Button |
-| Graphics Panel | G Key or Button | Button |
-| Reset Camera | R Key or Button | Button |
-| Help | H Key or Button | Button |
+|---|---|---|
+| Rotate | Mouse drag | One-finger drag |
+| Zoom | Wheel, smooth damping | Pinch, smooth damping |
+| Pause | Space or button | Pause button |
+| Camera reset | `R` or button | Camera button |
+| Help | `H` or Help | Help button |
+| Graphics | `G` or gear | Gear button |
 
-## 🎛️ Graphics Settings Guide
+The lighting preset bar provides Day, Sunrise, Sunset, and Night snapshots. Aurora can be enabled from Graphics Settings and is most visible at night.
 
-### Quality Presets
-
-```
-Minimum  → Low → Medium ⭐ → High → Ultra
-  (Mobile)               (Recommended)  (Desktop)
-```
-
-### Performance Tips
-
-**If Running Slowly:**
-- Lower quality preset
-- Reduce vegetation density
-- Disable shadows
-- Lower bloom strength
-
-**For Better Visuals:**
-- Increase shadow resolution
-- Higher vegetation density
-- Enable bloom and rays
-- Use Ultra preset on desktop
-
-## 🌐 Location & Time
-
-### Using Your Location
-1. Select "Real World Time" mode
-2. Click "Use My Location"
-3. Grant permission when prompted
-4. Scene updates with accurate sun position
-
-### Manual Location Setup
-- Adjust latitude and longitude sliders
-- Or type values directly
-- Scene updates in real-time
-
-### Common Coordinates
-- **Equator:** 0°, 0°
-- **London:** 51.5°, -0.1°
-- **Tokyo:** 35.7°, 139.7°
-- **Sydney:** -33.9°, 151.2°
-- **New York:** 40.7°, -74.0°
-
-## 💻 System Requirements
+## Requirements
 
 ### Minimum
-- Browser: Chrome, Firefox, Safari, Edge (2020+)
-- GPU: Integrated graphics
-- RAM: 2GB
-- CPU: Dual-core 2GHz
+
+- Chrome 90+, Firefox 88+, Safari 15+, or Edge 90+.
+- WebGL-capable GPU, 2 GB RAM, dual-core CPU.
+- Android 8+ with a recent Chrome/Firefox, or iOS 15+ Safari.
 
 ### Recommended
-- Browser: Latest Chrome/Firefox
-- GPU: Dedicated GPU
-- RAM: 4GB+
-- CPU: Quad-core 2.5GHz+
-- Display: 1920x1080+
 
-### Mobile
-- iOS 12+ (iPhone 6s+)
-- Android 5.0+ (Snapdragon 625+)
-- RAM: 2-3GB
-- Chrome, Firefox, Safari, Samsung Internet
+- 4+ CPU cores, 4 GB RAM, modern integrated GPU or dedicated GPU.
+- Desktop: 1080p display and current browser.
+- Mobile: 3 GB RAM, recent Snapdragon/Apple chip, and landscape orientation for the best view.
 
-## 📁 Project Structure
+The auto-recommendation is conservative: browser hardware APIs are optional and cannot identify every GPU accurately. Users can always override the preset.
 
-```
-realistic-3d-scene/
-├── index.html          # Main HTML file
-├── style.css           # Complete styling
-├── main.js             # Three.js scene & logic
-├── README.md           # This file
-├── TUTORIAL.md         # Comprehensive tutorial
-├── LICENSE             # MIT License
-├── CONTRIBUTING.md     # Contribution guide
-└── docs/               # Additional documentation
-```
+## Permissions and privacy
 
-## 🔧 Technologies
+GPS is optional and requested only after the user chooses “Use My Location” or real-time mode. Coordinates remain in the page and are not sent by this project. Geolocation normally requires HTTPS or localhost.
 
-- **Three.js:** 3D rendering engine
-- **Modern JavaScript:** ES6+ modules
-- **CSS3:** Responsive design
-- **WebGL:** GPU-accelerated rendering
-- **HTML5:** Semantic markup
+## Development
 
-## 🤝 Contributing
+The source is plain HTML/CSS/JavaScript. Edit `main.js`, `style.css`, and `index.html`, then refresh the local server. No npm install is required. See `TUTORIAL.md`, `CONTRIBUTING.md`, and `LICENSE` for more detail.
 
-Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+## Troubleshooting
 
-### Ways to Contribute
-- Report bugs via GitHub Issues
-- Suggest features in Discussions
-- Submit pull requests
-- Improve documentation
-- Optimize performance
-- Add translations
-- Share your creations!
+- **Black screen:** use an HTTP server, update the browser, enable hardware acceleration, and check DevTools.
+- **WebGL error:** update GPU drivers or use Minimum; remote/virtual browsers may disable WebGL.
+- **Slow rendering:** select Minimum/Low, disable shadows/Aurora, reduce browser tabs, and avoid battery-saver throttling.
+- **GPS denied:** use manual coordinates; browser GPS permissions do not work on insecure remote origins.
+- **Controls blocked:** close the graphics/tutorial panel or reload after clearing stale cached files.
 
-## 📝 License
+## License
 
-MIT License - See [LICENSE](./LICENSE) file for details.
-
-```
-Copyright (c) 2024 Deextire
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software...
-```
-
-## 🙏 Acknowledgments
-
-- **Three.js:** Amazing 3D graphics library
-- **Community:** Thanks to all contributors and users
-- **Inspiration:** Real-world lighting and atmospheric effects
-
-## 📞 Support
-
-### Getting Help
-1. Read [TUTORIAL.md](./TUTORIAL.md) for comprehensive guide
-2. Press `H` in the app for quick help
-3. Check [GitHub Issues](https://github.com/Deextire/realistic-3d-scene/issues)
-4. Start a [Discussion](https://github.com/Deextire/realistic-3d-scene/discussions)
-
-### Report Bugs
-
-Please use [GitHub Issues](https://github.com/Deextire/realistic-3d-scene/issues) with:
-- Clear description
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots/videos
-- Browser and device info
-
-## 🎯 Roadmap
-
-### Planned Features
-- [ ] Multiple weather systems (rain, snow, clouds)
-- [ ] Seasonal variations
-- [ ] Custom model import
-- [ ] Texture upload system
-- [ ] Animation keyframes
-- [ ] Screenshot/video export
-- [ ] VR support
-- [ ] Multi-language support
-
-## 📊 Performance Stats
-
-- **Desktop (High-End):** 60 FPS at 1440p with Ultra settings
-- **Desktop (Mid-Range):** 60 FPS at 1080p with High settings
-- **Mobile (High-End):** 60 FPS with High settings
-- **Mobile (Budget):** 30-60 FPS with Low/Medium settings
-
-## 🌟 Star History
-
-⭐ If you find this project useful, please consider giving it a star!
-
-## 📚 Learning Resources
-
-- [Three.js Documentation](https://threejs.org/docs/)
-- [WebGL Fundamentals](https://webglfundamentals.org/)
-- [MDN Web Docs](https://developer.mozilla.org/)
-- [Open Source Guides](https://opensource.guide/)
-
-## 🔗 Links
-
-- [GitHub Repository](https://github.com/Deextire/realistic-3d-scene)
-- [Live Demo](https://Deextire.github.io/realistic-3d-scene)
-- [Issues & Bugs](https://github.com/Deextire/realistic-3d-scene/issues)
-- [Discussions](https://github.com/Deextire/realistic-3d-scene/discussions)
-
----
-
-**Made with ❤️ by the Open Source Community**
-
-Happy exploring! 🌅✨
+MIT. See `LICENSE`. The procedural assets are generated by code; verify the license of any third-party asset before adding it.
