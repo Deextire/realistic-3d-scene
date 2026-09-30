@@ -3,13 +3,56 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Realistic Nature Scene</title>
+    <title>Realistic Nature Scene - Day/Night Cycle</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <div class="hud">
-      <span>Realistic Lighting Study</span>
-      <small>Three.js · post-processing · volumetric sun rays · vegetation</small>
+      <div class="hud-main">
+        <span>Realistic Lighting Study</span>
+        <small>Three.js · post-processing · volumetric sun rays · day/night cycle</small>
+      </div>
+      
+      <div class="cycle-selector">
+        <label>
+          <input type="radio" name="cycle-mode" value="simulated" checked />
+          <span>20 Min Cycle (Simulated)</span>
+        </label>
+        <label>
+          <input type="radio" name="cycle-mode" value="realtime" />
+          <span>Real World Time</span>
+        </label>
+      </div>
+
+      <div class="time-display">
+        <div class="time-value" id="timeDisplay">12:00</div>
+        <div class="location-display" id="locationDisplay">-</div>
+      </div>
+
+      <div class="controls">
+        <button id="pauseBtn" title="Pause time flow">⏸ Pause</button>
+        <button id="resetBtn" title="Reset to current/noon time">↻ Reset</button>
+        <button id="cameraResetBtn" title="Reset camera view">🎥 Camera</button>
+      </div>
+    </div>
+
+    <div class="debug-panel" id="debugPanel">
+      <div class="debug-item">
+        <span>Time Multiplier:</span>
+        <input type="range" id="timeMultiplier" min="0.1" max="5" step="0.1" value="1" />
+        <span id="multiplierValue">1x</span>
+      </div>
+      <div class="debug-item">
+        <span>Latitude:</span>
+        <input type="number" id="latitude" min="-90" max="90" step="1" value="0" />
+      </div>
+      <div class="debug-item">
+        <span>Longitude:</span>
+        <input type="number" id="longitude" min="-180" max="180" step="1" value="0" />
+      </div>
+      <div class="debug-item">
+        <button id="useLocationBtn">📍 Use Current Location</button>
+      </div>
     </div>
 
     <script type="module" src="./main.js"></script>
