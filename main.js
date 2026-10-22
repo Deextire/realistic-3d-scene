@@ -45,26 +45,30 @@ let qualityName = recommended;
 let lastNonDemoPresetName = recommended;
 let animationFrameId = null;
 let lastFrameTime = performance.now();
+let lastDisplayTimeText = '';
 let waterNormalRefreshCounter = 0;
 let waterLastSampleTime = 0;
+let lastCloudUpdateAt = 0;
 
 const diagnostics = {
   enabled: false,
+  sampleCount: 0,
   samples: [],
-  lastSampleAt: 0,
   minimum: Infinity,
   maximum: 0,
   average: 0,
+  lastSummaryTime: 0,
 };
 
 const perfMonitor = {
   enable(force) {
     diagnostics.enabled = force !== undefined ? !!force : true;
     diagnostics.samples = [];
+    diagnostics.sampleCount = 0;
     diagnostics.minimum = Infinity;
     diagnostics.maximum = 0;
     diagnostics.average = 0;
-    diagnostics.lastSampleAt = performance.now();
+    diagnostics.lastSummaryTime = performance.now();
     console.info('[ScenePerf] diagnostics enabled');
   },
   disable() {
@@ -75,27 +79,27 @@ const perfMonitor = {
     if (!diagnostics.enabled) return;
     diagnostics.samples.push(deltaMs);
     if (diagnostics.samples.length > 90) diagnostics.samples.shift();
-    diagnostics.minimum = Math.min(diagnostics.minimum, deltaMs);
-    diagnostics.maximum = Math.max(diagnostics.maximum, deltaMs);
-    diagnostics.average = diagnostics.samples.reduce((sum, value) => sum + value, 0) / diagnostics.samples.length;
+    diagnostics.sampleCount = diagnostics.samples.length;
+    diagnostics.minimum = Math.min(...diagnostics.samples, Infinity);
+    diagnostics.maximum = Math.max(...diagnostics.samples, 0);
+    diagnostics.average = diagnostics.samples.reduce((sum, value) => sum + value, 0) / diagnostics.sampleCount;
   },
   snapshot() {
-    const sampleCount = diagnostics.samples.length || 1;
+    if (!diagnostics.enabled) return { enabled: false };
+    const sampleCount = diagnostics.sampleCount || 1;
     const avg = diagnostics.samples.reduce((sum, value) => sum + value, 0) / sampleCount;
     return {
-      enabled: diagnostics.enabled,
+      enabled: true,
       sampleCount,
       averageMs: Number(avg.toFixed(2)),
-      minMs: Number((Math.min(...diagnostics.samples, Infinity) || 0).toFixed(2)),
-      maxMs: Number((Math.max(...diagnostics.samples, 0) || 0).toFixed(2)),
+      minMs: Number((diagnostics.minimum === Infinity ? 0 : diagnostics.minimum).toFixed(2)),
+      maxMs: Number(diagnostics.maximum.toFixed(2)),
       qualityName,
       demoMode: state.demoMode,
       pixelRatio: renderer ? renderer.getPixelRatio() : quality.pixelRatio,
       shadowMap: quality.shadow,
       bloom: quality.bloom,
-      water: { sampleCount: Math.max(1, waterNormalRefreshCounter), lastSampleMs: waterLastSampleTime },
-      clouds: quality.clouds,
-      rays: quality.rays,
+      waterNormals: waterNormalRefreshCounter,
     };
   },
 };
@@ -150,6 +154,7 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), quality.bloom, .45, .12);
 composer.addPass(bloom);
+composer.setSize(innerWidth, innerHeight);
 
 const hemi = new THREE.HemisphereLight(0xe9f2ff, 0x29251f, 1.4);
 scene.add(hemi);
@@ -311,6 +316,15 @@ function getCurrentMinutes() {
   return now.getHours() * 60 + now.getMinutes();
 }
 
+function resizeRenderTargets() {
+  const targetPixelRatio = Math.min(devicePixelRatio || 1, quality.pixelRatio, MAX_PIXEL_RATIO);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(targetPixelRatio);
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+}
+
 function syncRendererState() {
   const targetPixelRatio = Math.min(devicePixelRatio || 1, quality.pixelRatio, MAX_PIXEL_RATIO);
   renderer.setPixelRatio(targetPixelRatio);
@@ -410,6 +424,10 @@ function updateSky() {
 
 function updateClouds(timeSeconds) {
   if (!clouds) return;
+  const cloudUpdateInterval = mobile ? 1 / 15 : 1 / 20;
+  if (timeSeconds - lastCloudUpdateAt < cloudUpdateInterval) return;
+  lastCloudUpdateAt = timeSeconds;
+
   clouds.children.forEach((cloud, index) => {
     const drift = ((timeSeconds * 1.6 * state.wind) + index * 7.5) % 66;
     cloud.position.x = -28 + drift - 20;
@@ -425,16 +443,26 @@ function updateDust(timeSeconds) {
   }
 }
 
+function updateTimeDisplay() {
+  const timeText = `${String(Math.floor(state.minutes / 60)).padStart(2, '0')}:${String(Math.floor(state.minutes % 60)).padStart(2, '0')}`;
+  const el = document.getElementById('timeDisplay');
+  if (!el) return;
+  if (el.textContent !== timeText) {
+    el.textContent = timeText;
+    lastDisplayTimeText = timeText;
+  }
+}
+
 const clock = new THREE.Clock();
 function animate(now = performance.now()) {
   const elapsed = Math.min(now - lastFrameTime, 200);
   lastFrameTime = now;
   perfMonitor.record(elapsed);
 
-  if (diagnostics.enabled && now - diagnostics.lastSampleAt > 2000) {
+  if (diagnostics.enabled && now - diagnostics.lastSummaryTime > 2000) {
     const summary = perfMonitor.snapshot();
     console.info('[ScenePerf]', summary);
-    diagnostics.lastSampleAt = now;
+    diagnostics.lastSummaryTime = now;
   }
 
   if (!document.hidden) {
@@ -447,10 +475,7 @@ function animate(now = performance.now()) {
     updateWaterAndAtmosphere(now / 1000);
     updateClouds(now / 1000);
     updateDust(now / 1000);
-
-    document.getElementById('timeDisplay')?.replaceChildren(
-      document.createTextNode(`${String(Math.floor(state.minutes / 60)).padStart(2, '0')}:${String(Math.floor(state.minutes % 60)).padStart(2, '0')}`)
-    );
+    updateTimeDisplay();
 
     controls.update();
     composer.render();
@@ -606,12 +631,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  composer.setSize(innerWidth, innerHeight);
-});
+addEventListener('resize', resizeRenderTargets);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -723,5 +743,6 @@ if (resetGraphicsBtn) {
 setDemoMode(true);
 refreshGraphicsSettings();
 updateDemoButton();
+resizeRenderTargets();
 if (animationFrameId === null) animationFrameId = requestAnimationFrame(animate);
 window.__demoScene = { state, quality, setDemoMode, applyPreset, refreshGraphicsSettings };
