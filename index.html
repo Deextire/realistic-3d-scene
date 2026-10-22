@@ -8,15 +8,13 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <!-- Main HUD Controls -->
-    <div class="hud">
+    <div class="hud" aria-label="Scene controls">
       <div class="hud-main">
         <span>Realistic Lighting Study</span>
         <small>Three.js · Post-processing · Day/Night Cycle</small>
       </div>
-      
-      <!-- Day/Night Cycle Mode Selection -->
-      <div class="cycle-selector panel">
+
+      <div class="cycle-selector panel" aria-label="Time mode selection">
         <label>
           <input type="radio" name="cycle-mode" value="simulated" checked />
           <span>🔄 20 Min Cycle</span>
@@ -27,59 +25,55 @@
         </label>
       </div>
 
-      <!-- Time Display -->
-      <div class="time-display panel">
+      <div class="time-display panel" aria-live="polite">
         <div class="time-value" id="timeDisplay">12:00</div>
         <div class="location-display" id="locationDisplay">Equator</div>
       </div>
 
-      <!-- Main Controls -->
-      <div class="controls">
-        <button id="pauseBtn" title="Pause/Resume time flow">⏸ Pause</button>
-        <button id="resetBtn" title="Reset to default time">↻ Reset</button>
-        <button id="cameraResetBtn" title="Reset camera view">🎥 Camera</button>
-        <button id="helpBtn" title="Show tutorial">❓ Help</button>
+      <div class="controls" aria-label="Primary controls">
+        <button id="pauseBtn" class="control-btn" title="Pause/Resume time flow">⏸ Pause</button>
+        <button id="resetBtn" class="control-btn" title="Reset to default time">↻ Reset</button>
+        <button id="cameraResetBtn" class="control-btn" title="Reset camera view">🎥 Camera</button>
+        <button id="helpBtn" class="control-btn" title="Show tutorial">❓ Help</button>
       </div>
     </div>
 
-    <!-- Debug/Settings Panel -->
-    <div class="debug-panel panel" id="debugPanel">
+    <div class="debug-panel panel" id="debugPanel" aria-label="Advanced settings panel">
       <div class="panel-header">
         <span>Advanced Settings</span>
-        <button class="close-btn" id="closeDebugBtn">✕</button>
+        <button class="close-btn" id="closeDebugBtn" aria-label="Close advanced settings">✕</button>
       </div>
-      <div class="debug-item">
-        <span>Time Speed:</span>
-        <input type="range" id="timeMultiplier" min="0.1" max="5" step="0.1" value="1" />
-        <span id="multiplierValue">1x</span>
-      </div>
-      <div class="debug-item">
-        <span>Latitude:</span>
-        <input type="number" id="latitude" min="-90" max="90" step="1" value="0" />
-      </div>
-      <div class="debug-item">
-        <span>Longitude:</span>
-        <input type="number" id="longitude" min="-180" max="180" step="1" value="0" />
-      </div>
-      <div class="debug-item">
-        <button id="useLocationBtn" style="width: 100%;">📍 Use My Location</button>
+      <div class="panel-body">
+        <div class="debug-item">
+          <span>Time Speed:</span>
+          <input type="range" id="timeMultiplier" min="0.1" max="5" step="0.1" value="1" />
+          <span id="multiplierValue">1x</span>
+        </div>
+        <div class="debug-item">
+          <span>Latitude:</span>
+          <input type="number" id="latitude" min="-90" max="90" step="1" value="0" />
+        </div>
+        <div class="debug-item">
+          <span>Longitude:</span>
+          <input type="number" id="longitude" min="-180" max="180" step="1" value="0" />
+        </div>
+        <div class="debug-item full-width">
+          <button id="useLocationBtn" class="action-btn">📍 Use My Location</button>
+        </div>
       </div>
     </div>
 
-    <!-- Settings Button -->
-    <button class="settings-btn" id="settingsBtn" title="Open graphics settings (Press G)">⚙️</button>
+    <button class="settings-btn" id="settingsBtn" title="Open graphics settings (Press G)" aria-label="Open graphics settings">⚙️</button>
 
-    <!-- Graphics Settings Panel -->
-    <div class="graphics-panel" id="graphicsPanel">
-      <div class="graphics-header">
+    <div class="graphics-panel" id="graphicsPanel" aria-label="Graphics settings panel">
+      <div class="graphics-header panel-header">
         <span>⚙️ Graphics Settings</span>
-        <button class="close-btn" id="closeGraphicsBtn">✕</button>
+        <button class="close-btn" id="closeGraphicsBtn" aria-label="Close graphics settings">✕</button>
       </div>
       <div class="graphics-content">
-        <!-- Quality Presets -->
         <div class="quality-presets">
           <label>Quality Preset</label>
-          <select id="qualitySelect">
+          <select id="qualitySelect" aria-label="Select graphics quality preset">
             <option value="minimum">Minimum (Mobile)</option>
             <option value="low">Low Quality</option>
             <option value="medium" selected>Medium (Recommended)</option>
@@ -89,7 +83,6 @@
           <small id="deviceInfoText">Detecting device...</small>
         </div>
 
-        <!-- Graphics Sliders -->
         <div class="graphics-slider">
           <label>Shadow Quality</label>
           <input type="range" id="shadowQuality" min="0" max="3" step="1" value="2" />
@@ -98,112 +91,47 @@
 
         <div class="graphics-slider">
           <label>Bloom Strength</label>
-          <input type="range" id="bloomSlider" min="0" max="1" step="0.1" value="0.6" />
+          <input type="range" id="bloomSlider" min="0" max="1.5" step="0.1" value="0.6" />
           <span id="bloomLabel">0.6</span>
         </div>
 
         <div class="graphics-slider">
-          <label>Vegetation Density</label>
+          <label>Shadow Resolution</label>
+          <input type="range" id="shadowResSlider" min="0" max="3" step="1" value="2" />
+          <span id="shadowResLabel">1024x1024</span>
+        </div>
+
+        <div class="graphics-slider">
+          <label>Vegetation</label>
           <input type="range" id="vegetationSlider" min="0" max="1" step="0.1" value="1" />
           <span id="vegetationLabel">100%</span>
         </div>
 
-        <div class="graphics-slider">
-          <label>Shadow Resolution</label>
-          <input type="range" id="shadowResSlider" min="0" max="3" step="1" value="1" />
-          <span id="shadowResLabel">1024x1024</span>
+        <div class="graphics-actions">
+          <button id="saveSettingsBtn" class="action-btn">Save</button>
+          <button id="resetGraphicsBtn" class="action-btn secondary">Reset</button>
         </div>
-
-        <!-- Custom Colors -->
-        <div class="graphics-section-title">Scene Colors</div>
-        <div class="custom-colors">
-          <div class="color-picker-group">
-            <label>Day Sky</label>
-            <input type="color" id="daySkyColor" value="#9bb3cf" />
-          </div>
-          <div class="color-picker-group">
-            <label>Night Sky</label>
-            <input type="color" id="nightSkyColor" value="#1a1a2e" />
-          </div>
-          <div class="color-picker-group">
-            <label>Sun Color</label>
-            <input type="color" id="sunColor" value="#fff1b5" />
-          </div>
-          <div class="color-picker-group">
-            <label>Fog Color</label>
-            <input type="color" id="fogColor" value="#c0d3e5" />
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <button class="reset-btn" id="resetGraphicsBtn">↻ Reset to Recommended</button>
-        <button class="reset-btn" id="saveSettingsBtn">💾 Save Settings</button>
       </div>
     </div>
 
-    <!-- Tutorial/Help Modal -->
-    <div class="tutorial-modal" id="tutorialModal">
-      <div class="tutorial-content">
-        <div class="tutorial-header">
-          <h2>Welcome! 👋</h2>
-          <button class="close-btn" id="closeTutorialBtn">✕</button>
+    <div class="help-modal" id="tutorialModal" aria-hidden="true">
+      <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+        <div class="help-header panel-header">
+          <span id="tutorialTitle">Scene Guide</span>
+          <button class="close-btn" id="closeTutorialBtn" aria-label="Close scene guide">✕</button>
         </div>
-        <div class="tutorial-body">
-          <div class="tutorial-section">
-            <h3>🎮 How to Use</h3>
-            <ul>
-              <li><strong>Rotate View:</strong> Drag your mouse or finger</li>
-              <li><strong>Zoom:</strong> Scroll wheel or pinch</li>
-              <li><strong>Pause Time:</strong> Click the pause button</li>
-              <li><strong>Change Mode:</strong> Select simulated or real-time mode</li>
-            </ul>
-          </div>
-          <div class="tutorial-section">
-            <h3>⚙️ Graphics Settings</h3>
-            <ul>
-              <li><strong>Quality Preset:</strong> Choose based on your device</li>
-              <li><strong>Bloom:</strong> Light halo effect around sun</li>
-              <li><strong>Shadows:</strong> Realistic ground shadows</li>
-              <li><strong>Vegetation:</strong> Grass and tree density</li>
-            </ul>
-          </div>
-          <div class="tutorial-section">
-            <h3>📍 Location Settings</h3>
-            <ul>
-              <li>Enable location to get accurate real-world time</li>
-              <li>Manual latitude/longitude for any location</li>
-              <li>Auto-detects your device for optimal settings</li>
-            </ul>
-          </div>
-          <div class="tutorial-section">
-            <h3>💡 Tips</h3>
-            <ul>
-              <li>On mobile? Use "Minimum" or "Low" quality</li>
-              <li>Press <kbd>G</kbd> to toggle graphics panel</li>
-              <li>Customize colors for your own theme</li>
-              <li>Save settings to use them next time</li>
-            </ul>
-          </div>
-          <div class="tutorial-section">
-            <h3>🔧 Keyboard Shortcuts</h3>
-            <table class="shortcuts-table">
-              <tr><td>G</td><td>Toggle Graphics Panel</td></tr>
-              <tr><td>Space</td><td>Pause/Resume</td></tr>
-              <tr><td>R</td><td>Reset Camera</td></tr>
-              <tr><td>H</td><td>Show This Help</td></tr>
-            </table>
-          </div>
+        <div class="help-body">
+          <p>Explore the environment by dragging the camera. Use the controls to pause the time cycle, reset the view, or jump between lighting states.</p>
+          <ul>
+            <li>Drag to orbit the camera.</li>
+            <li>Scroll or pinch to zoom.</li>
+            <li>Use Pause to stop the cycle.</li>
+            <li>Open Graphics Settings to adjust quality.</li>
+            <li>Switch between simulated and real-world time.</li>
+          </ul>
+          <button id="closeTutorialBtnMain" class="action-btn full-width">Close</button>
         </div>
-        <button class="reset-btn" id="closeTutorialBtnMain" style="width: 100%; margin-top: 16px;">Got it! 👍</button>
       </div>
     </div>
-
-    <!-- Loading Indicator -->
-    <div class="loading-indicator" id="loadingIndicator" style="display: none;">
-      <div class="loading-spinner"></div>
-      <div>Loading scene...</div>
-    </div>
-
-    <script type="module" src="./main.js"></script>
   </body>
 </html>
