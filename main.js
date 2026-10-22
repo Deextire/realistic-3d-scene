@@ -29,6 +29,7 @@ const state = {
   mode: 'simulated', paused: false, minutes: 720, multiplier: 1,
   latitude: 0, longitude: 0, location: 'Manual location', aurora: false,
   dayColor: 0xc0d3e5, nightColor: 0x11182f, fogColor: 0xc0d3e5,
+  demoMode: true, wind: 0.8,
 };
 
 let renderer;
@@ -126,11 +127,11 @@ for (const [x, z, s] of treePositions.slice(0, quality.trees)) {
 }
 scene.add(trees);
 
-function textureRadial() { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const g = x.createRadialGradient(64,64,4,64,64,64); g.addColorStop(0,'#fff'); g.addColorStop(.25,'#ffe9a0'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); }
+function textureRadial() { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const g = x.createRadialGradient(64,64,4,64,64,64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.2, 'rgba(255,245,200,1)'); g.addColorStop(0.7, 'rgba(255,180,80,0.35)'); g.addColorStop(1, 'rgba(255,180,80,0)'); x.fillStyle = g; x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); }
 const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: textureRadial(), color: 0xfff0ae, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
 sunSprite.scale.set(9,9,1); scene.add(sunSprite);
 const rays = new THREE.Group();
-for (let i = 0; i < quality.rays; i++) { const r = new THREE.Sprite(new THREE.SpriteMaterial({ map: textureRadial(), color: 0xffd69b, transparent: true, opacity: .12, blending: THREE.AdditiveBlending, depthWrite: false })); r.scale.set(5, 18, 1); r.position.set(-12 + i * 3, 14, 8); rays.add(r); }
+for (let i = 0; i < quality.rays; i++) { const r = new THREE.Sprite(new THREE.SpriteMaterial({ map: textureRadial(), color: 0xffd69b, transparent: true, opacity: .12, blending: THREE.AdditiveBlending, depthWrite: false })); r.position.set(Math.cos(i) * 4, 1.8 + (i % 3) * .6, Math.sin(i) * 4); r.scale.set(10 + i * 2, 16 + i * 2, 1); rays.add(r); }
 scene.add(rays);
 
 const aurora = new THREE.Group();
@@ -141,8 +142,98 @@ for (let i = 0; i < (mobile ? 5 : 12); i++) {
 }
 scene.add(aurora);
 
+const water = new THREE.Mesh(
+  new THREE.PlaneGeometry(84, 84, 28, 28),
+  new THREE.MeshStandardMaterial({
+    color: 0x4aa9b5,
+    transparent: true,
+    opacity: 0.8,
+    roughness: 0.35,
+    metalness: 0.08,
+    emissive: 0x1d404f,
+    emissiveIntensity: 0.18,
+  })
+);
+water.rotation.x = -Math.PI / 2;
+water.position.y = 0.12;
+water.receiveShadow = quality.shadow > 0;
+scene.add(water);
+
+const waterBase = new Float32Array(water.geometry.attributes.position.array.length);
+water.geometry.attributes.position.array.forEach((value, index) => {
+  waterBase[index] = value;
+});
+
+const clouds = new THREE.Group();
+for (let i = 0; i < 5; i++) {
+  const cloud = new THREE.Group();
+  const puffMaterial = new THREE.MeshStandardMaterial({ color: 0xdde9ff, transparent: true, opacity: 0.32, roughness: 1 });
+  const puffPositions = [
+    [-1.2, 0, 0], [0, .2, 0], [1.1, 0, 0], [.2, .4, .4],
+  ];
+  puffPositions.forEach(([x, y, z]) => {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 12), puffMaterial);
+    puff.position.set(x, y, z);
+    cloud.add(puff);
+  });
+  cloud.position.set(-18 + i * 10, 15 + (i % 2) * 2.2, -24 + (i % 3) * 8);
+  cloud.scale.setScalar(1 + i * 0.2);
+  cloud.userData.offset = i * 1.7;
+  clouds.add(cloud);
+}
+scene.add(clouds);
+
+const atmosphericDust = new THREE.Group();
+const dustGeometry = new THREE.BufferGeometry();
+const dustPositions = [];
+for (let i = 0; i < 180; i++) {
+  dustPositions.push((Math.random() - .5) * 70, 2 + Math.random() * 16, (Math.random() - .5) * 70);
+}
+dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustPositions, 3));
+const dustMaterial = new THREE.PointsMaterial({
+  color: 0xe7efff,
+  size: .12,
+  transparent: true,
+  opacity: 0.45,
+  depthWrite: false,
+});
+const dustCloud = new THREE.Points(dustGeometry, dustMaterial);
+ atmosphericDust.add(dustCloud);
+scene.add(atmosphericDust);
+
 function setTime(minutes, label = '') { state.minutes = ((minutes % 1440) + 1440) % 1440; if (label) flashStatus(label); }
 function flashStatus(text) { const el = document.getElementById('locationDisplay'); if (el) el.textContent = text; }
+
+function updateWaterAndAtmosphere(time) {
+  if (water) {
+    const pos = water.geometry.attributes.position;
+    const wave = 0.16 * (state.demoMode ? 1.3 : 1);
+    for (let i = 0; i < pos.count; i++) {
+      const x = waterBase[i * 3];
+      const y = waterBase[i * 3 + 1];
+      const z = waterBase[i * 3 + 2];
+      const offset = Math.sin((x * 0.26) + time * 1.5) * wave + Math.cos((y * 0.26) - time * 1.1) * wave * 0.7;
+      pos.setZ(i, offset);
+    }
+    pos.needsUpdate = true;
+    water.geometry.computeVertexNormals();
+    water.material.opacity = 0.18 + (0.75 * clamp(Math.sin((state.minutes / 1440) * Math.PI), .12, 1));
+  }
+
+  if (clouds) {
+    clouds.children.forEach((cloud, index) => {
+      cloud.position.x = -28 + ((time * 1.6 * state.wind) + index * 7.5) % 66 - 20;
+      cloud.position.z = -22 + (index % 3) * 8 + Math.sin(time * 0.2 + cloud.userData.offset) * 4;
+      cloud.position.y = 14 + Math.sin(time * 0.4 + index) * 1.4 + (index % 2) * 2;
+    });
+  }
+
+  if (atmosphericDust) {
+    dustCloud.rotation.y = time * 0.04;
+    dustCloud.material.opacity = state.demoMode ? 0.55 : 0.3;
+  }
+}
+
 function updateSky() {
   const daylight = clamp(Math.sin((state.minutes / 1440 - .25) * Math.PI), .04, 1);
   const n = state.mode === 'realtime' ? new Date().getHours() * 60 + new Date().getMinutes() : state.minutes;
@@ -156,6 +247,9 @@ function updateSky() {
   rays.children.forEach(r => { r.material.opacity = effective > .3 ? .14 * effective : 0; });
   aurora.visible = state.aurora; aurora.children.forEach((r, i) => { r.material.opacity = state.aurora && effective < .35 ? .12 + Math.sin(performance.now() * .001 + i) * .04 : 0; });
   bloom.strength = quality.bloom * (.45 + effective * .55);
+  if (water) {
+    water.material.emissiveIntensity = effective < .35 ? .22 : .12;
+  }
 }
 
 const clock = new THREE.Clock();
@@ -163,32 +257,168 @@ function animate() {
   const dt = Math.min(clock.getDelta(), .05);
   if (!state.paused && state.mode === 'simulated') state.minutes = (state.minutes + dt * 72 * state.multiplier) % 1440;
   updateSky();
+  updateWaterAndAtmosphere(performance.now() * 0.001);
   document.getElementById('timeDisplay')?.replaceChildren(document.createTextNode(`${String(Math.floor(state.minutes/60)).padStart(2,'0')}:${String(Math.floor(state.minutes%60)).padStart(2,'0')}`));
   controls.update(); composer.render(); requestAnimationFrame(animate);
 }
 animate();
 
-function applyPreset(name) { if (!presets[name]) return; qualityName = name; quality = { ...presets[name] }; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio)); renderer.shadowMap.enabled = quality.shadow > 0; sun.castShadow = quality.shadow > 0; sun.shadow.mapSize.set(quality.shadow || 512, quality.shadow || 512); bloom.strength = quality.bloom; document.getElementById('qualitySelect') && (document.getElementById('qualitySelect').value = name); flashStatus(`Preset: ${name}`); }
+function applyPreset(name) { if (!presets[name]) return; qualityName = name; quality = { ...presets[name] }; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio)); renderer.shadowMap.enabled = quality.shadow > 0; sun.castShadow = quality.shadow > 0; sun.shadow.mapSize.set(quality.shadow || 512, quality.shadow || 512); ground.receiveShadow = quality.shadow > 0; path.receiveShadow = quality.shadow > 0; grass.castShadow = grass.receiveShadow = quality.shadow > 0; trees.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = quality.shadow > 0; }); bloom.strength = quality.bloom; }
 function bind(id, event, fn) { document.getElementById(id)?.addEventListener(event, fn); }
+
+function updateDemoButton() {
+  const demoBtn = document.getElementById('demoModeBtn');
+  if (!demoBtn) return;
+  demoBtn.classList.toggle('active', state.demoMode);
+  demoBtn.textContent = state.demoMode ? '🎬 Demo On' : '🎬 Demo Off';
+  demoBtn.title = state.demoMode ? 'Demo mode enabled for presentation-friendly visuals' : 'Demo mode disabled';
+}
+
+function setDemoMode(enabled) {
+  state.demoMode = enabled;
+  if (state.demoMode) {
+    quality = { ...presets[mobile ? 'low' : 'medium'] };
+    quality.bloom = Math.min(quality.bloom, 0.7);
+    quality.aurora = false;
+    state.wind = 0.8;
+  } else {
+    quality = { ...presets[qualityName || recommended] };
+    state.wind = 1;
+  }
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio));
+    renderer.shadowMap.enabled = quality.shadow > 0;
+  sun.castShadow = quality.shadow > 0;
+  bloom.strength = quality.bloom;
+  updateDemoButton();
+}
+
 bind('pauseBtn','click', () => { state.paused = !state.paused; const b = document.getElementById('pauseBtn'); if (b) b.textContent = state.paused ? '▶ Resume' : '⏸ Pause'; });
 bind('resetBtn','click', () => { setTime(state.mode === 'realtime' ? new Date().getHours() * 60 + new Date().getMinutes() : 720); });
 bind('cameraResetBtn','click', () => { camera.position.set(12,8.5,14); controls.target.set(0,2.5,0); controls.update(); });
 bind('timeMultiplier','input', e => { state.multiplier = clamp(safeNumber(e.target.value,1), .1, 5); const el=document.getElementById('multiplierValue'); if(el) el.textContent=`${state.multiplier.toFixed(1)}x`; });
 bind('qualitySelect','change', e => applyPreset(e.target.value));
-for (const [id, min, max, key] of [['latitude',-90,90,'latitude'],['longitude',-180,180,'longitude']]) bind(id,'change',e => { const v=clamp(safeNumber(e.target.value,0),min,max); state[key]=v; e.target.value=v; });
-bind('useLocationBtn','click', () => navigator.geolocation?.getCurrentPosition(p => { state.latitude=p.coords.latitude; state.longitude=p.coords.longitude; state.location='GPS location'; flashStatus(state.location); }, () => flashStatus('GPS unavailable; using manual location')));
+for (const [id, min, max, key] of [['latitude',-90,90,'latitude'],['longitude',-180,180,'longitude']]) bind(id,'change',e => { const v=clamp(safeNumber(e.target.value,0),min,max); state[key]=v; e.target.value = v; });
+bind('useLocationBtn','click', () => navigator.geolocation?.getCurrentPosition(p => { state.latitude=p.coords.latitude; state.longitude=p.coords.longitude; state.location='GPS location'; flashStatus('GPS location'); }, () => { state.location='Manual location'; flashStatus('Manual location'); }));
 bind('settingsBtn','click', () => document.getElementById('graphicsPanel')?.classList.toggle('active'));
 bind('closeGraphicsBtn','click', () => document.getElementById('graphicsPanel')?.classList.remove('active'));
 bind('helpBtn','click', () => document.getElementById('tutorialModal')?.classList.add('active'));
 bind('closeTutorialBtn','click', () => document.getElementById('tutorialModal')?.classList.remove('active'));
 bind('closeTutorialBtnMain','click', () => document.getElementById('tutorialModal')?.classList.remove('active'));
 bind('closeDebugBtn','click', () => document.getElementById('debugPanel')?.classList.remove('active'));
-for (const radio of document.querySelectorAll('input[name="cycle-mode"]')) radio.addEventListener('change', e => { state.mode=e.target.value; if(state.mode==='realtime') state.minutes=new Date().getHours()*60+new Date().getMinutes(); });
+for (const radio of document.querySelectorAll('input[name="cycle-mode"]')) radio.addEventListener('change', e => { state.mode=e.target.value; if(state.mode==='realtime') state.minutes=new Date().getHours() * 60 + new Date().getMinutes(); });
 
 const modeBar = document.createElement('div'); modeBar.className='mode-bar';
 [['Day',720],['Sunrise',390],['Sunset',1110],['Night',0]].forEach(([label, minutes]) => { const b=document.createElement('button'); b.textContent=label; b.onclick=()=>setTime(minutes,label); modeBar.appendChild(b); });
 document.querySelector('.controls')?.appendChild(modeBar);
-const qualitySelect = document.getElementById('qualitySelect'); if (qualitySelect) { qualitySelect.innerHTML = Object.keys(presets).map(p => `<option value="${p}" ${p===qualityName?'selected':''}>${p[0].toUpperCase()+p.slice(1)}</option>`).join(''); }
-const graphicsContent = document.querySelector('.graphics-content'); if (graphicsContent) { const label=document.createElement('label'); label.className='aurora-toggle'; label.innerHTML='<input type="checkbox" id="auroraToggle"> Aurora Borealis'; graphicsContent.appendChild(label); bind('auroraToggle','change',e=>state.aurora=e.target.checked); }
-document.addEventListener('keydown', e => { if (e.target.matches('input,select,textarea')) return; if(e.key===' '){e.preventDefault(); document.getElementById('pauseBtn')?.click();} if(e.key.toLowerCase()==='g') document.getElementById('graphicsPanel')?.classList.toggle('active'); if(e.key.toLowerCase()==='h') document.getElementById('helpBtn')?.click(); if(e.key.toLowerCase()==='r') document.getElementById('cameraResetBtn')?.click(); });
+const qualitySelect = document.getElementById('qualitySelect'); if (qualitySelect) { qualitySelect.innerHTML = Object.keys(presets).map(p => `<option value="${p}" ${p===qualityName?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join(''); qualitySelect.value = qualityName; }
+const graphicsContent = document.querySelector('.graphics-content'); if (graphicsContent) { const label=document.createElement('label'); label.className='aurora-toggle'; label.innerHTML='<input type="checkbox" id="auroraToggle" /> Aurora Borealis'; graphicsContent.appendChild(label); const cb = document.getElementById('auroraToggle'); cb.checked = state.aurora; cb.addEventListener('change', e => { state.aurora = e.target.checked; }); }
+document.addEventListener('keydown', e => { if (e.target.matches('input,select,textarea')) return; if(e.key===' '){e.preventDefault(); document.getElementById('pauseBtn')?.click();} if(e.key.toLowerCase()==='r'){ document.getElementById('cameraResetBtn')?.click(); } if(e.key.toLowerCase()==='h'){ document.getElementById('helpBtn')?.click(); } if(e.key.toLowerCase()==='g'){ document.getElementById('settingsBtn')?.click(); } if(e.key.toLowerCase()==='d'){ setDemoMode(!state.demoMode); } });
 addEventListener('resize', () => { camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); composer.setSize(innerWidth,innerHeight); });
+
+const demoBtn = document.getElementById('demoModeBtn');
+if (demoBtn) {
+  demoBtn.addEventListener('click', () => setDemoMode(!state.demoMode));
+}
+
+setDemoMode(true);
+updateDemoButton();
+
+const deviceInfoText = document.getElementById('deviceInfoText');
+if (deviceInfoText) {
+  deviceInfoText.textContent = `${mobile ? 'Mobile' : 'Desktop'} • ${memory}GB RAM • ${cores} cores`;
+}
+
+function refreshGraphicsSettings() {
+  const shadowQuality = document.getElementById('shadowQuality');
+  const bloomSlider = document.getElementById('bloomSlider');
+  const vegetationSlider = document.getElementById('vegetationSlider');
+  const shadowResSlider = document.getElementById('shadowResSlider');
+  const shadowLabel = document.getElementById('shadowLabel');
+  const bloomLabel = document.getElementById('bloomLabel');
+  const vegetationLabel = document.getElementById('vegetationLabel');
+  const shadowResLabel = document.getElementById('shadowResLabel');
+
+  if (shadowQuality) { shadowQuality.value = quality.shadow > 0 ? (quality.shadow >= 2048 ? 3 : quality.shadow >= 1024 ? 2 : 1) : 0; }
+  if (bloomSlider) { bloomSlider.value = quality.bloom.toFixed(1); }
+  if (vegetationSlider) { vegetationSlider.value = 1; }
+  if (shadowResSlider) { shadowResSlider.value = quality.shadow >= 2048 ? 3 : quality.shadow >= 1024 ? 2 : 1; }
+  if (shadowLabel) shadowLabel.textContent = quality.shadow > 0 ? `${quality.shadow}px` : 'Disabled';
+  if (bloomLabel) bloomLabel.textContent = quality.bloom.toFixed(1);
+  if (vegetationLabel) vegetationLabel.textContent = '100%';
+  if (shadowResLabel) shadowResLabel.textContent = quality.shadow > 0 ? `${quality.shadow}x${quality.shadow}` : 'Disabled';
+}
+
+refreshGraphicsSettings();
+
+const demoStatus = document.createElement('div');
+demoStatus.id = 'demoStatus';
+demoStatus.textContent = state.demoMode ? 'Presentation mode active' : 'Custom mode';
+demoStatus.style.cssText = 'font-size:11px; opacity:0.75; letter-spacing:0.08em; text-transform:uppercase;';
+document.querySelector('.hud-main')?.appendChild(demoStatus);
+
+window.__demoScene = { state, quality, updateDemoButton, setDemoMode, refreshGraphicsSettings };
+
+const qualityKeyMap = {
+  0: 0,
+  1: 512,
+  2: 1024,
+  3: 2048,
+};
+
+const bloomSlider = document.getElementById('bloomSlider');
+if (bloomSlider) {
+  bloomSlider.addEventListener('input', e => {
+    const value = clamp(safeNumber(e.target.value, quality.bloom), 0, 1.5);
+    quality.bloom = value;
+    bloom.strength = quality.bloom;
+    document.getElementById('bloomLabel').textContent = value.toFixed(1);
+  });
+}
+
+const shadowResSlider = document.getElementById('shadowResSlider');
+if (shadowResSlider) {
+  shadowResSlider.addEventListener('input', e => {
+    const level = Number(e.target.value);
+    quality.shadow = qualityKeyMap[level] || 0;
+    renderer.shadowMap.enabled = quality.shadow > 0;
+    sun.shadow.mapSize.set(quality.shadow || 512, quality.shadow || 512);
+    ground.receiveShadow = quality.shadow > 0;
+    document.getElementById('shadowResLabel').textContent = quality.shadow > 0 ? `${quality.shadow}x${quality.shadow}` : 'Disabled';
+    document.getElementById('shadowLabel').textContent = quality.shadow > 0 ? `${quality.shadow}px` : 'Disabled';
+  });
+}
+
+const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+if (saveSettingsBtn) {
+  saveSettingsBtn.addEventListener('click', () => {
+    localStorage.setItem('realistic-scene-settings', JSON.stringify({
+      qualityName,
+      demoMode: state.demoMode,
+      bloom: quality.bloom,
+      shadow: quality.shadow,
+    }));
+    flashStatus('Settings saved');
+  });
+}
+
+const savedSettings = localStorage.getItem('realistic-scene-settings');
+if (savedSettings) {
+  try {
+    const parsed = JSON.parse(savedSettings);
+    if (parsed.qualityName && presets[parsed.qualityName]) applyPreset(parsed.qualityName);
+    if (typeof parsed.demoMode === 'boolean') setDemoMode(parsed.demoMode);
+    if (typeof parsed.bloom === 'number') quality.bloom = parsed.bloom;
+    if (typeof parsed.shadow === 'number') quality.shadow = parsed.shadow;
+  } catch (error) {
+    console.warn('Could not restore saved scene settings', error);
+  }
+}
+
+const resetGraphicsBtn = document.getElementById('resetGraphicsBtn');
+if (resetGraphicsBtn) {
+  resetGraphicsBtn.addEventListener('click', () => {
+    applyPreset(recommended);
+    setDemoMode(true);
+    refreshGraphicsSettings();
+  });
+}
