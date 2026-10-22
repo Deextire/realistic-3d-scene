@@ -8,6 +8,7 @@ const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || i
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const safeNumber = (v, fallback) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+const MAX_PIXEL_RATIO = mobile ? 1.25 : 1.75;
 
 const presets = {
   minimum: { pixelRatio: .65, ground: 24, grass: 350, trees: 4, clouds: 1, rays: 0, shadow: 0, bloom: 0, aurora: false },
@@ -47,6 +48,65 @@ let lastFrameTime = performance.now();
 let waterNormalRefreshCounter = 0;
 let waterLastSampleTime = 0;
 
+const diagnostics = {
+  enabled: false,
+  samples: [],
+  lastSampleAt: 0,
+  minimum: Infinity,
+  maximum: 0,
+  average: 0,
+};
+
+const perfMonitor = {
+  enable(force) {
+    diagnostics.enabled = force !== undefined ? !!force : true;
+    diagnostics.samples = [];
+    diagnostics.minimum = Infinity;
+    diagnostics.maximum = 0;
+    diagnostics.average = 0;
+    diagnostics.lastSampleAt = performance.now();
+    console.info('[ScenePerf] diagnostics enabled');
+  },
+  disable() {
+    diagnostics.enabled = false;
+    console.info('[ScenePerf] diagnostics disabled');
+  },
+  record(deltaMs) {
+    if (!diagnostics.enabled) return;
+    diagnostics.samples.push(deltaMs);
+    if (diagnostics.samples.length > 90) diagnostics.samples.shift();
+    diagnostics.minimum = Math.min(diagnostics.minimum, deltaMs);
+    diagnostics.maximum = Math.max(diagnostics.maximum, deltaMs);
+    diagnostics.average = diagnostics.samples.reduce((sum, value) => sum + value, 0) / diagnostics.samples.length;
+  },
+  snapshot() {
+    const sampleCount = diagnostics.samples.length || 1;
+    const avg = diagnostics.samples.reduce((sum, value) => sum + value, 0) / sampleCount;
+    return {
+      enabled: diagnostics.enabled,
+      sampleCount,
+      averageMs: Number(avg.toFixed(2)),
+      minMs: Number((Math.min(...diagnostics.samples, Infinity) || 0).toFixed(2)),
+      maxMs: Number((Math.max(...diagnostics.samples, 0) || 0).toFixed(2)),
+      qualityName,
+      demoMode: state.demoMode,
+      pixelRatio: renderer ? renderer.getPixelRatio() : quality.pixelRatio,
+      shadowMap: quality.shadow,
+      bloom: quality.bloom,
+      water: { sampleCount: Math.max(1, waterNormalRefreshCounter), lastSampleMs: waterLastSampleTime },
+      clouds: quality.clouds,
+      rays: quality.rays,
+    };
+  },
+};
+
+window.__scenePerf = {
+  enable: () => perfMonitor.enable(true),
+  disable: () => perfMonitor.disable(),
+  getSummary: () => perfMonitor.snapshot(),
+  setEnabled: (enabled) => perfMonitor.enable(enabled),
+};
+
 let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ antialias: !mobile, powerPreference: 'high-performance' });
@@ -62,7 +122,7 @@ const currentSky = new THREE.Color();
 scene.fog = new THREE.Fog(state.fogColor, 20, 70);
 
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio));
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio, MAX_PIXEL_RATIO));
 renderer.shadowMap.enabled = quality.shadow > 0;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -252,7 +312,7 @@ function getCurrentMinutes() {
 }
 
 function syncRendererState() {
-  const targetPixelRatio = Math.min(devicePixelRatio || 1, quality.pixelRatio);
+  const targetPixelRatio = Math.min(devicePixelRatio || 1, quality.pixelRatio, MAX_PIXEL_RATIO);
   renderer.setPixelRatio(targetPixelRatio);
 
   const shadowsEnabled = quality.shadow > 0;
@@ -348,10 +408,6 @@ function updateSky() {
   water.material.emissiveIntensity = daylight < .35 ? .22 : .12;
 }
 
-const cloudMotion = {
-  lastUpdate: 0,
-};
-
 function updateClouds(timeSeconds) {
   if (!clouds) return;
   clouds.children.forEach((cloud, index) => {
@@ -373,6 +429,13 @@ const clock = new THREE.Clock();
 function animate(now = performance.now()) {
   const elapsed = Math.min(now - lastFrameTime, 200);
   lastFrameTime = now;
+  perfMonitor.record(elapsed);
+
+  if (diagnostics.enabled && now - diagnostics.lastSampleAt > 2000) {
+    const summary = perfMonitor.snapshot();
+    console.info('[ScenePerf]', summary);
+    diagnostics.lastSampleAt = now;
+  }
 
   if (!document.hidden) {
     const dt = elapsed / 1000;
